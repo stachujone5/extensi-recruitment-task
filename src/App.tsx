@@ -1,5 +1,6 @@
 import { yupResolver } from '@hookform/resolvers/yup'
 import axios from 'axios'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { object, string, date } from 'yup'
 
@@ -20,22 +21,14 @@ const schema = object({
   name: string().required('Name is required').min(3, 'Name is too short'),
   surname: string().required('Surname is required').min(3, 'Surname is too short'),
   birthDate: date().required(),
-  email: string()
-    .required('Email is required')
-    .test('Validation on server', 'Email is invalid', async value => {
-      try {
-        const { data } = await axios.get<ApiResponse>(`/api/email-validator.php?email=${value}`)
-        return data.validation_status
-      } catch {
-        return false
-      }
-    }),
   gender: string().notRequired().nullable()
 })
 
 type FormValues = InferType<typeof schema>
 
 export const App = () => {
+  const [isEmailValid, setIsEmailValid] = useState(true)
+  const [emailValue, setEmailValue] = useState('')
   const {
     formState: { errors },
     handleSubmit,
@@ -45,15 +38,40 @@ export const App = () => {
 
   const [isCooldown, setIsCooldown] = useCooldown()
 
-  const onSubmit: SubmitHandler<FormValues> = ({ birthDate, email, gender, name, surname }) => {
+  const onSubmit: SubmitHandler<FormValues> = ({ birthDate, gender, name, surname }) => {
+    setEmailValue('')
     reset()
     alert(
-      `Name: ${name}, Surname: ${surname}, Email: ${email}, birthDate: ${birthDate?.toDateString()}, Gender: ${
+      `Name: ${name}, Surname: ${surname}, Email: ${emailValue}, birthDate: ${birthDate?.toDateString()}, Gender: ${
         gender ?? 'Not specified'
       }`
     )
     setIsCooldown()
   }
+
+  const validateEmailOnServer = async (email: string) => {
+    // not fetch on empty string
+    if (!email) {
+      setIsEmailValid(true)
+      return
+    }
+
+    try {
+      const { data } = await axios.get<ApiResponse>(`/api/email-validator.php?email=${email}`)
+      return setIsEmailValid(data.validation_status)
+    } catch (err) {
+      return setIsEmailValid(false)
+    }
+  }
+
+  useEffect(() => {
+    // prevent race conditions
+    const delayDebounceFn = setTimeout(() => {
+      void validateEmailOnServer(emailValue)
+    }, 200)
+
+    return () => clearTimeout(delayDebounceFn)
+  }, [emailValue])
 
   return (
     <main className='h-screen flex flex-col justify-center items-center'>
@@ -93,14 +111,14 @@ export const App = () => {
             <span className='label-text'>Email</span>
           </label>
           <input
+            onChange={e => setEmailValue(e.target.value)}
             type='email'
             placeholder='Enter your email'
             className='input input-bordered w-full max-w-xs'
-            {...register('email')}
           />
         </div>
 
-        {errors.email && <p className='text-red-400'>{errors.email.message}</p>}
+        {!isEmailValid && <p className='text-red-400'>Email is invalid</p>}
         <div className='form-control w-full max-w-xs'>
           <label className='label'>
             <span className='label-text'>Birthdate</span>
@@ -126,7 +144,15 @@ export const App = () => {
           </label>
         </div>
 
-        <button className='btn btn-outline block w-full max-w-xs' type='submit'>
+        <button
+          className='btn btn-outline block w-full max-w-xs'
+          type='submit'
+          onClick={() => {
+            if (!emailValue) {
+              setIsEmailValid(false)
+            }
+          }}
+        >
           Submit
         </button>
       </form>
