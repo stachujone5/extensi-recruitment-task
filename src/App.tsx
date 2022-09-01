@@ -25,6 +25,7 @@ const schema = object({
     .test('Validation on server', 'Email is invalid', async value => {
       try {
         const { data } = await axios.get<ApiResponse>(`/api/email-validator.php?email=${value}`)
+        console.log(data)
         return data.validation_status
       } catch {
         return false
@@ -110,6 +111,7 @@ export const App = () => {
             placeholder='Enter your birth date'
             className='input input-bordered w-full max-w-xs'
             min='1900-01-01'
+            max={`${new Date().getFullYear()}-01-01`}
             {...register('birthDate')}
           />
         </div>
