@@ -1,18 +1,18 @@
 import { useEffect, useRef, useState } from 'react'
 
 export const useCooldown = (ms = 1000) => {
-  const [isCoolDown, setIsCoolDown] = useState(false)
+  const [isCooldown, setIsCooldown] = useState(false)
 
   const timeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
 
-  const setCoolDown = () => {
-    setIsCoolDown(true)
-    timeoutRef.current = setTimeout(() => setIsCoolDown(false), ms)
+  const setCooldown = () => {
+    setIsCooldown(true)
+    timeoutRef.current = setTimeout(() => setIsCooldown(false), ms)
   }
 
   useEffect(() => {
     return () => clearTimeout(timeoutRef.current)
   }, [])
 
-  return [isCoolDown, setCoolDown] as const
+  return [isCooldown, setCooldown] as const
 }
