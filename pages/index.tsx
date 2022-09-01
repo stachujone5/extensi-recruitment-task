@@ -1,4 +1,4 @@
-import { HomePageContent } from '../components/HomePageContent'
+import { HomePageContent } from '../components/page-contents/HomePageContent'
 
 const Home = () => {
   return <HomePageContent />
