@@ -25,7 +25,6 @@ const schema = object({
     .test('Validation on server', 'Email is invalid', async value => {
       try {
         const { data } = await axios.get<ApiResponse>(`/api/email-validator.php?email=${value}`)
-        console.log(data)
         return data.validation_status
       } catch {
         return false
