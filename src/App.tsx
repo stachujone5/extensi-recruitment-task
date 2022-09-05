@@ -39,6 +39,8 @@ export const App = () => {
   const [isCooldown, setIsCooldown] = useCooldown()
 
   const onSubmit: SubmitHandler<FormValues> = ({ birthDate, gender, name, surname }) => {
+    if (!isEmailValid) return
+
     setEmailValue('')
     reset()
     alert(
