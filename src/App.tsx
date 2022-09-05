@@ -1,6 +1,6 @@
 import { yupResolver } from '@hookform/resolvers/yup'
 import axios from 'axios'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { object, string, date } from 'yup'
 
@@ -38,8 +38,10 @@ export const App = () => {
 
   const [isCooldown, setIsCooldown] = useCooldown()
 
-  const onSubmit: SubmitHandler<FormValues> = ({ birthDate, gender, name, surname }) => {
-    if (!isEmailValid) return
+  const onSubmit: SubmitHandler<FormValues> = async ({ birthDate, gender, name, surname }) => {
+    const isValid = await validateEmailOnServer(emailValue)
+
+    if (!isValid) return
 
     setEmailValue('')
     reset()
@@ -51,35 +53,32 @@ export const App = () => {
     setIsCooldown()
   }
 
+  const validateEmailOnServer = useCallback(async (email: string) => {
+    try {
+      const { data } = await axios.get<ApiResponse>(`/api/email-validator.php?email=${encodeURIComponent(email)}`)
+      return data.validation_status
+    } catch (err) {
+      return false
+    }
+  }, [])
+
   useEffect(() => {
     let active = true
 
-    const validateEmailOnServer = async () => {
-      // do not fetch on empty string
-      if (!emailValue) {
-        setIsEmailValid(true)
-        return
-      }
+    if (!emailValue.length) return
 
-      try {
-        const { data } = await axios.get<ApiResponse>(
-          `/api/email-validator.php?email=${encodeURIComponent(emailValue)}`
-        )
-        if (active) {
-          setIsEmailValid(data.validation_status)
-        }
-      } catch (err) {
-        if (active) {
-          setIsEmailValid(false)
-        }
+    const fetch = async () => {
+      const isValid = await validateEmailOnServer(emailValue)
+      if (active) {
+        setIsEmailValid(isValid)
       }
     }
 
-    void validateEmailOnServer()
+    void fetch()
     return () => {
       active = false
     }
-  }, [emailValue])
+  }, [emailValue, validateEmailOnServer])
 
   return (
     <main className='h-screen flex flex-col justify-center items-center'>
