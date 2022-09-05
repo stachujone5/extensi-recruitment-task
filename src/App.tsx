@@ -51,28 +51,34 @@ export const App = () => {
     setIsCooldown()
   }
 
-  const validateEmailOnServer = async (email: string) => {
-    // not fetch on empty string
-    if (!email) {
-      setIsEmailValid(true)
-      return
-    }
-
-    try {
-      const { data } = await axios.get<ApiResponse>(`/api/email-validator.php?email=${email}`)
-      return setIsEmailValid(data.validation_status)
-    } catch (err) {
-      return setIsEmailValid(false)
-    }
-  }
-
   useEffect(() => {
-    // prevent race conditions
-    const delayDebounceFn = setTimeout(() => {
-      void validateEmailOnServer(emailValue)
-    }, 200)
+    let active = true
 
-    return () => clearTimeout(delayDebounceFn)
+    const validateEmailOnServer = async () => {
+      // do not fetch on empty string
+      if (!emailValue) {
+        setIsEmailValid(true)
+        return
+      }
+
+      try {
+        const { data } = await axios.get<ApiResponse>(
+          `/api/email-validator.php?email=${encodeURIComponent(emailValue)}`
+        )
+        if (active) {
+          setIsEmailValid(data.validation_status)
+        }
+      } catch (err) {
+        if (active) {
+          setIsEmailValid(false)
+        }
+      }
+    }
+
+    void validateEmailOnServer()
+    return () => {
+      active = false
+    }
   }, [emailValue])
 
   return (
@@ -114,7 +120,7 @@ export const App = () => {
           </label>
           <input
             onChange={e => setEmailValue(e.target.value)}
-            type='email'
+            type='text'
             placeholder='Enter your email'
             className='input input-bordered w-full max-w-xs'
           />
