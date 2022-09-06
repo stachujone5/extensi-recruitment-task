@@ -53,9 +53,12 @@ export const App = () => {
     setIsCooldown()
   }
 
-  const validateEmailOnServer = useCallback(async (email: string) => {
+  const validateEmailOnServer = useCallback(async (email: string, signal?: AbortSignal) => {
     try {
-      const { data } = await axios.get<ApiResponse>(`/api/email-validator.php?email=${encodeURIComponent(email)}`)
+      const { data } = await axios.get<ApiResponse>(`/api/email-validator.php?email=${encodeURIComponent(email)}`, {
+        signal
+      })
+
       return data.validation_status
     } catch (err) {
       return false
@@ -63,20 +66,18 @@ export const App = () => {
   }, [])
 
   useEffect(() => {
-    let active = true
-
     if (!emailValue.length) return
 
+    const controller = new AbortController()
+
     const fetch = async () => {
-      const isValid = await validateEmailOnServer(emailValue)
-      if (active) {
-        setIsEmailValid(isValid)
-      }
+      const isValid = await validateEmailOnServer(emailValue, controller.signal)
+      setIsEmailValid(isValid)
     }
 
     void fetch()
     return () => {
-      active = false
+      controller.abort()
     }
   }, [emailValue, validateEmailOnServer])
 
